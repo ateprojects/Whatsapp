@@ -1,0 +1,19 @@
+{
+  "name": "whatsapp-bot",
+  "version": "1.0.0",
+  "description": "Bot de WhatsApp para ATE Guatemala utilizando whatsapp-web.js",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"  // Este es el comando que Render usará para arrancar tu bot
+  },
+  "dependencies": {
+    "whatsapp-web.js": "^1.14.1",  // Librería para controlar WhatsApp Web
+    "qrcode-terminal": "^0.12.0",  // Para generar el QR en la terminal al iniciar sesión
+    "express": "^4.17.1"           // Opcional, para crear un servidor web si es necesario
+  },
+  "engines": {
+    "node": ">=14.x"  // Render usará la versión 14.x de Node.js o superior
+  },
+  "author": "ATE Guatemala",
+  "license": "ISC"
+  }
