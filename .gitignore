@@ -1,0 +1,4 @@
+# Ignorar node_modules, carpetas temporales y otros archivos innecesarios
+node_modules/
+npm-debug.log
+.env
