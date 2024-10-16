@@ -1,86 +1,105 @@
 const express = require('express');
-const qrcode = require('qrcode');  // Asegúrate de instalar la librería qrcode
-const { Client } = require('whatsapp-web.js');  // Asegúrate de tener instalada whatsapp-web.js
+const { Client } = require('whatsapp-web.js');
+const qrcode = require('qrcode');
+
 const app = express();
+const port = 3000;
+
+// Crear cliente de WhatsApp Web
 const client = new Client();
 
-// Definir el comando del menú
-const menu = `
-Bienvenido al Bot de Soporte ATE Guatemala. Elige una opción:
-
-1. Soporte Técnico
-2. Solicitar Hosting Luna
-3. Horarios de Atención
-4. Métodos de Pago
-5. Salir
-`;
-
-// Enviar el menú al recibir cualquier mensaje que no esté en el menú
-client.on('message', (message) => {
-  console.log(message.body); // Imprimir el mensaje para depuración
-
-  // Si el mensaje no es uno de los comandos del menú, se muestra el menú
-  if (message.body.toLowerCase() !== '1' && message.body.toLowerCase() !== '2' && message.body.toLowerCase() !== '3' && message.body.toLowerCase() !== '4' && message.body.toLowerCase() !== '5') {
-    message.reply(`\n${menu}`);
-  }
-
-  // Responder a las opciones del menú
-  switch (message.body) {
-    case '1':
-      message.reply('Gracias por contactar con soporte técnico. Un agente estará en breve para ayudarte.');
-      // Aquí agregarías la lógica para el ticket de soporte, si es necesario, puedes integrarlo con alguna API de tickets.
-      break;
-    case '2':
-      message.reply('Por favor, envíanos los siguientes datos para solicitar el hosting Luna:\n1. Nombre\n2. Apellido\n3. Correo\n4. Celular\n5. ¿Tienes hosting de terceros?\n6. ¿Tienes dominio? ¿Deseas comprar uno? ¿Deseas activar la potencia lunar?');
-      break;
-    case '3':
-      message.reply('Nuestros horarios de atención son:\nLunes a Viernes: 9 AM - 10 PM\nSábado: 10 AM - 10 PM\nDomingo: 24 horas.');
-      break;
-    case '4':
-      message.reply('Métodos de pago:\n- Banco Azteca\n- Banco Industrial\n- Zigi\n- Cuik\n- PayPal (tarjetas de débito y crédito)');
-      break;
-    case '5':
-      message.reply('Gracias por usar nuestro servicio. ¡Hasta pronto!');
-      break;
-    default:
-      message.reply(`\n${menu}`); // Enviar el menú nuevamente si la opción no está definida.
-  }
-});
-
-// Ruta principal para verificar si el bot está corriendo
-app.get('/', (req, res) => {
-  res.send('¡Bot de WhatsApp está funcionando! Visita /qr para ver el código QR.');
-});
-
-// Ruta para servir el código QR de WhatsApp
+// Inicialización de WhatsApp Web
 client.on('qr', (qr) => {
-  // Genera el QR como imagen en base64
-  qrcode.toDataURL(qr, (err, url) => {
-    if (err) {
-      console.error('Error generando el QR:', err);
-      return;
+    // Generar el QR para ser escaneado
+    qrcode.toDataURL(qr, (err, url) => {
+        if (err) {
+            console.error('Error generando el QR:', err);
+            return;
+        }
+        // Enviar el QR generado al navegador para que el usuario lo escanee
+        app.get('/qr', (req, res) => {
+            res.send(`
+                <h1>Escanea el siguiente código QR con WhatsApp</h1>
+                <img src="${url}" alt="QR de WhatsApp" />
+                <p>El QR es válido solo por un tiempo limitado. Si no funciona, vuelve a cargar esta página.</p>
+            `);
+        });
+    });
+});
+
+// Este evento se activa cuando WhatsApp Web se ha autenticado correctamente
+client.on('ready', () => {
+    console.log('WhatsApp está listo para enviar y recibir mensajes');
+});
+
+// Este evento se activa si hay un fallo en la autenticación
+client.on('auth_failure', (message) => {
+    console.error('Autenticación fallida:', message);
+    app.get('/qr', (req, res) => {
+        res.send(`
+            <h1>Hubo un error al intentar autenticar el WhatsApp Web</h1>
+            <p>Por favor, intenta de nuevo.</p>
+        `);
+    });
+});
+
+// Lógica para responder a los mensajes
+client.on('message', (message) => {
+    console.log('Mensaje recibido:', message.body);
+
+    // Si el mensaje es "hola" o cualquier otro, mostramos el menú
+    if (message.body.toLowerCase() === 'hola') {
+        client.sendMessage(message.from, '¡Hola! ¿Cómo puedo ayudarte? Elige una opción:\n1. Soporte\n2. Solicitar Hosting Luna\n3. Ver horarios\n4. Métodos de pago');
     }
 
-    // Ruta para mostrar el QR
-    app.get('/qr', (req, res) => {
-      res.send(`
-        <h1>Escanea el siguiente código QR con WhatsApp</h1>
-        <img src="${url}" alt="QR de WhatsApp" />
-      `);
-    });
-  });
+    // Responde al comando "Soporte"
+    if (message.body === '1') {
+        client.sendMessage(message.from, 'Has elegido soporte. Un agente se pondrá en contacto contigo pronto.');
+    }
+
+    // Responde al comando "Solicitar Hosting Luna"
+    if (message.body === '2') {
+        client.sendMessage(message.from, 'Para solicitar el hosting Luna, por favor envíanos los siguientes datos:\n1. Nombre\n2. Apellido\n3. Correo electrónico\n4. Número de celular\n5. ¿Tienes hosting de terceros?\n6. ¿Tienes un dominio?\n7. ¿Quieres activar la potencia lunar?');
+    }
+
+    // Responde al comando "Ver horarios"
+    if (message.body === '3') {
+        client.sendMessage(message.from, 'Nuestros horarios son:\n- Lunes a Viernes: 9:00 AM - 10:00 PM\n- Sábado: 10:00 AM - 10:00 PM\n- Domingo: 24 horas');
+    }
+
+    // Responde al comando "Métodos de pago"
+    if (message.body === '4') {
+        client.sendMessage(message.from, 'Los métodos de pago disponibles son:\n- Banco Azteca\n- Banco Industrial\n- Zigi\n- Cuik\n- Tarjetas de débito y crédito mediante PayPal');
+    }
+
+    // Si el mensaje no corresponde a un comando, responder con un mensaje genérico
+    if (message.body !== '1' && message.body !== '2' && message.body !== '3' && message.body !== '4' && message.body.toLowerCase() !== 'hola') {
+        client.sendMessage(message.from, 'Lo siento, no reconozco ese comando. Por favor, elige una opción del menú.');
+    }
 });
 
-// Evento cuando WhatsApp está listo
-client.on('ready', () => {
-  console.log('Bot de WhatsApp está listo');
+// Mantener la sesión activa para evitar desconexión
+client.on('disconnected', (reason) => {
+    console.log('Cliente desconectado:', reason);
+    client.initialize();  // Re-conecta el cliente
 });
 
-// Inicializa el cliente de WhatsApp
-client.initialize();
+// Ruta de prueba para enviar un mensaje (ejemplo)
+app.get('/send-message', (req, res) => {
+    const to = 'NUMERO_DE_DESTINO';  // Aquí pon el número de teléfono destino
+    const message = '¡Hola, este es un mensaje enviado desde la API de WhatsApp!';
+    
+    client.sendMessage(to, message)
+        .then(response => {
+            res.send('Mensaje enviado correctamente');
+        })
+        .catch(error => {
+            res.send('Error al enviar el mensaje: ' + error.message);
+        });
+});
 
-// Define el puerto en el que se ejecutará el servidor
-const port = process.env.PORT || 3000;
+// Iniciar el servidor
 app.listen(port, () => {
-  console.log(`Servidor corriendo en el puerto ${port}`);
+    console.log(`Servidor escuchando en puerto ${port}`);
+    client.initialize();  // Inicializa el cliente de WhatsApp Web
 });
