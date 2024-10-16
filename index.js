@@ -1,5 +1,5 @@
 const { Client, LocalAuth } = require('whatsapp-web.js');
-const qrcode = require('qrcode-terminal');
+const qrcode = require('qrcode');
 const express = require('express');
 
 // Inicializa el cliente de WhatsApp
@@ -7,10 +7,26 @@ const client = new Client({
   authStrategy: new LocalAuth(),  // Autenticación local
 });
 
-// Muestra el QR en la consola para la autenticación de WhatsApp
+// Crear un servidor Express
+const app = express();
+const port = process.env.PORT || 3000;
+
+// Al generar el QR, lo convertimos en una imagen y lo servimos
 client.on('qr', (qr) => {
-  qrcode.generate(qr, { small: true });
-  console.log('Escanea este código QR con tu WhatsApp!');
+  console.log('Generando el QR...');
+  
+  // Convertimos el QR a una imagen base64
+  qrcode.toDataURL(qr, (err, url) => {
+    if (err) {
+      console.error('Error generando el QR:', err);
+    } else {
+      console.log('QR generado exitosamente.');
+      // Hacemos que el servidor sirva esta imagen cuando alguien acceda a "/qr"
+      app.get('/qr', (req, res) => {
+        res.send(`<img src="${url}" alt="QR para WhatsApp" />`);
+      });
+    }
+  });
 });
 
 // Cuando el cliente esté listo
@@ -32,12 +48,9 @@ client.on('message', (message) => {
 // Inicia el cliente
 client.initialize();
 
-// Crear servidor con Express (si lo deseas para APIs adicionales)
-const app = express();
-const port = process.env.PORT || 3000;
-
+// Servir el bot en Express
 app.get('/', (req, res) => {
-  res.send('¡Bot de WhatsApp está funcionando!');
+  res.send('¡Bot de WhatsApp está funcionando! Visita /qr para ver el código QR.');
 });
 
 app.listen(port, () => {
